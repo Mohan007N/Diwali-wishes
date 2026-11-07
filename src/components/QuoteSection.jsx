@@ -460,7 +460,45 @@ export default function QuoteSection({
             <span>↺ Celebrate Another Name</span>
           </button>
         </div>
+
+        {/* Card Attribution */}
+        <p
+          style={{
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontStyle: 'italic',
+            fontSize: '0.85rem',
+            color: '#a899cc',
+            opacity: 0.65,
+            marginTop: '22px',
+            marginBottom: '0',
+            letterSpacing: '0.04em',
+          }}
+        >
+          Made with love by Mohan
+        </p>
       </motion.div>
+
+      {/* ── Footer Attribution at Last in Small Text ── */}
+      <footer
+        data-html2canvas-ignore
+        style={{
+          marginTop: '36px',
+          textAlign: 'center',
+          fontFamily: "'Cinzel', serif",
+          fontSize: '0.74rem',
+          letterSpacing: '0.22em',
+          color: '#a899cc',
+          opacity: 0.8,
+          textTransform: 'uppercase',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <span>Made with</span>
+        <span style={{ color: '#FF2A6D', fontSize: '0.88rem' }}>❤️</span>
+        <span>by Mohan</span>
+      </footer>
     </section>
   );
 }
