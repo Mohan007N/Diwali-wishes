@@ -43,8 +43,10 @@ export function useAudio() {
 
     try {
       if (!audioElRef.current) {
+        const base = import.meta.env.BASE_URL || './';
+        const cleanBase = base.endsWith('/') ? base : `${base}/`;
         const audio = new Audio();
-        audio.src = '/ReelAudio-53164.mp3';
+        audio.src = `${cleanBase}ReelAudio-53164.mp3`;
         audio.loop = true;
         audio.volume = 0.8;
         audioElRef.current = audio;
@@ -56,7 +58,7 @@ export function useAudio() {
           })
           .catch(() => {
             // Try fallback path if root is different
-            audio.src = '/audio/zaalima.mp3';
+            audio.src = `${cleanBase}audio/zaalima.mp3`;
             audio
               .play()
               .then(() => {

@@ -5,6 +5,23 @@ An extraordinary, cinematic interactive Diwali 2026 celebration experience built
 
 ---
 
+## 🌐 Deploy to Vercel
+
+### Option 1: 1-Click Deploy
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FMohan007N%2FDiwali-wishes)
+
+### Option 2: Import via Vercel Dashboard
+1. Go to [vercel.com](https://vercel.com) and sign in.
+2. Click **Add New...** → **Project**.
+3. Import your GitHub repository: **`Mohan007N/Diwali-wishes`**.
+4. Vercel automatically recognizes the `vercel.json` and `Vite` configuration:
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+5. Click **Deploy**. Within 30 seconds, your Diwali experience will be live on a fast global edge network!
+
+---
+
 ## ✨ Features
 
 - **Audio & Volume Advisory**: High-end headphone/speaker indicator with animated soundwave equalizers and interactive test chime before stepping into the festival.
