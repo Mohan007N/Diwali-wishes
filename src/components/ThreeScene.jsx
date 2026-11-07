@@ -466,7 +466,7 @@ function FireworksSystem({ bursts }) {
   const activeExplosionsRef = useRef([]);
 
   const sparkTex = useMemo(
-    () => makeGlowTexture('rgba(255,255,255,1)', 'rgba(255,215,106,0.5)', 64),
+    () => makeGlowTexture('rgba(255,255,255,1)', 'rgba(255,215,106,0.6)', 64),
     []
   );
 
@@ -524,13 +524,13 @@ function FireworksSystem({ bursts }) {
     for (let k = 0; k < n; k++) {
       const phi = Math.acos(1 - (2 * (k + 0.5)) / n);
       const theta = Math.PI * (1 + Math.sqrt(5)) * k;
-      const sp = (6.2 + Math.random() * 5.8) * (type === 'willow' ? 0.78 : 1.05);
+      const sp = (7.5 + Math.random() * 6.5) * (type === 'willow' ? 0.82 : 1.1);
 
       if (type === 'ring') {
         const ringAngle = (k / n) * Math.PI * 2;
-        vel[k * 3] = Math.cos(ringAngle) * sp * 0.9;
-        vel[k * 3 + 1] = (Math.random() - 0.2) * sp * 0.2;
-        vel[k * 3 + 2] = Math.sin(ringAngle) * sp * 0.9;
+        vel[k * 3] = Math.cos(ringAngle) * sp * 0.95;
+        vel[k * 3 + 1] = (Math.random() - 0.2) * sp * 0.25;
+        vel[k * 3 + 2] = Math.sin(ringAngle) * sp * 0.95;
       } else {
         vel[k * 3] = Math.cos(theta) * Math.sin(phi) * sp;
         vel[k * 3 + 1] = Math.cos(phi) * sp;
@@ -549,7 +549,7 @@ function FireworksSystem({ bursts }) {
     }
 
     // ── Tier 2: High-Velocity White-Hot Core Flash ──
-    const coreCount = 60;
+    const coreCount = 70;
     const corePos = new Float32Array(coreCount * 3);
     const coreVel = new Float32Array(coreCount * 3);
     const coreCol = new Float32Array(coreCount * 3);
@@ -558,7 +558,7 @@ function FireworksSystem({ bursts }) {
     for (let k = 0; k < coreCount; k++) {
       const phi = Math.acos(1 - (2 * (k + 0.5)) / coreCount);
       const theta = Math.PI * (1 + Math.sqrt(5)) * k;
-      const csp = 7.5 + Math.random() * 6.5;
+      const csp = 8.5 + Math.random() * 7.5;
 
       coreVel[k * 3] = Math.cos(theta) * Math.sin(phi) * csp;
       coreVel[k * 3 + 1] = Math.cos(phi) * csp;
@@ -574,7 +574,7 @@ function FireworksSystem({ bursts }) {
     }
 
     // ── Tier 3: Secondary Weeping Willow Streamers ──
-    const willowCount = type === 'willow' ? 120 : 50;
+    const willowCount = type === 'willow' ? 140 : 60;
     const wPos = new Float32Array(willowCount * 3);
     const wVel = new Float32Array(willowCount * 3);
     const wCol = new Float32Array(willowCount * 3);
@@ -582,25 +582,25 @@ function FireworksSystem({ bursts }) {
 
     for (let k = 0; k < willowCount; k++) {
       const a = (k / willowCount) * Math.PI * 2;
-      const r = 0.5 + Math.random() * 1.8;
+      const r = 0.6 + Math.random() * 2.0;
       wPos[k * 3] = x;
       wPos[k * 3 + 1] = y;
       wPos[k * 3 + 2] = z;
-      wVel[k * 3] = Math.cos(a) * r * (1.8 + Math.random() * 2.2);
-      wVel[k * 3 + 1] = (Math.random() - 0.25) * r * 2.5;
-      wVel[k * 3 + 2] = Math.sin(a) * r * (1.8 + Math.random() * 2.2);
+      wVel[k * 3] = Math.cos(a) * r * (2.2 + Math.random() * 2.5);
+      wVel[k * 3 + 1] = (Math.random() - 0.2) * r * 2.8;
+      wVel[k * 3 + 2] = Math.sin(a) * r * (2.2 + Math.random() * 2.5);
       wCol[k * 3] = goldC.r;
       wCol[k * 3 + 1] = goldC.g;
       wCol[k * 3 + 2] = goldC.b;
     }
 
-    const main = makePS(pos, vel, col, type === 'willow' ? 0.32 : 0.28);
-    const core = makePS(corePos, coreVel, coreCol, 0.38);
-    const willow = makePS(wPos, wVel, wCol, 0.22);
-    const burstLife = type === 'willow' ? 4.2 : 3.0;
+    const main = makePS(pos, vel, col, type === 'willow' ? 0.48 : 0.42);
+    const core = makePS(corePos, coreVel, coreCol, 0.55);
+    const willow = makePS(wPos, wVel, wCol, 0.35);
+    const burstLife = type === 'willow' ? 4.5 : 3.2;
 
     // Instantaneous High-Intensity Flash Light
-    const flashLight = new THREE.PointLight(hex, 5.5, 45, 1.8);
+    const flashLight = new THREE.PointLight(hex, 6.0, 50, 1.8);
     flashLight.position.set(x, y, z);
     scene.add(flashLight);
 
@@ -615,21 +615,15 @@ function FireworksSystem({ bursts }) {
     });
   }, [PALETTE, makePS, scene]);
 
-  // Handle incoming burst requests: Launch Rocket with Ascent Trail
-  useEffect(() => {
-    if (!bursts || bursts.length === 0) return;
-    const latest = bursts[bursts.length - 1];
-    if (!latest || latest._processed) return;
-    latest._processed = true;
+  // Launch a single rocket towards target coordinates
+  const launchRocket = useCallback((burst) => {
+    const { x, y, z, color, count = 320, type = 'chrysanthemum' } = burst;
 
-    const { x, y, z, color, count = 320, type = 'chrysanthemum' } = latest;
-
-    // Rocket launch origin at the bottom ground horizon
-    const startX = x * 0.4 + (Math.random() - 0.5) * 1.8;
+    const startX = x * 0.35 + (Math.random() - 0.5) * 2.0;
     const startY = -7.5;
     const startZ = z;
 
-    // Rocket trail: 32 trailing spark particles for long glowing plume
+    // Rocket trail: 32 trailing spark particles for glowing plume
     const trailCount = 32;
     const trailPositions = new Float32Array(trailCount * 3);
     const trailColors = new Float32Array(trailCount * 3);
@@ -651,7 +645,7 @@ function FireworksSystem({ bursts }) {
     geo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
     geo.setAttribute('color', new THREE.BufferAttribute(trailColors, 3));
     const mat = new THREE.PointsMaterial({
-      size: 0.28,
+      size: 0.38,
       map: sparkTex,
       vertexColors: true,
       transparent: true,
@@ -661,16 +655,16 @@ function FireworksSystem({ bursts }) {
     const pts = new THREE.Points(geo, mat);
     scene.add(pts);
 
-    // Launch ground spark flash
-    const launchFlash = new THREE.PointLight(0xFFB020, 2.5, 18, 2);
-    launchFlash.position.set(startX, startY, startZ);
-    scene.add(launchFlash);
+    // Launch rocket head glow light
+    const rocketLight = new THREE.PointLight(0xFFB020, 2.8, 15, 2);
+    rocketLight.position.set(startX, startY, startZ);
+    scene.add(rocketLight);
 
     activeRocketsRef.current.push({
       pts,
       geo,
       mat,
-      launchFlash,
+      rocketLight,
       startX,
       startY,
       startZ,
@@ -679,12 +673,22 @@ function FireworksSystem({ bursts }) {
       targetZ: z,
       positions: trailPositions,
       age: 0,
-      duration: 0.35, // Fast powerful launch ascent
+      duration: 0.38, // Fast powerful launch ascent
       color,
       count,
       type,
     });
-  }, [bursts, scene, sparkTex]);
+  }, [scene, sparkTex]);
+
+  // Handle incoming burst requests: Process ALL unhandled bursts
+  useEffect(() => {
+    if (!bursts || bursts.length === 0) return;
+    bursts.forEach((b) => {
+      if (!b || b._processed) return;
+      b._processed = true;
+      launchRocket(b);
+    });
+  }, [bursts, launchRocket]);
 
   // Frame Loop: Update Physics for Rockets and Expanding Shells
   useFrame((_, dt) => {
@@ -694,26 +698,20 @@ function FireworksSystem({ bursts }) {
       R.age += dt;
       const progress = Math.min(1.0, R.age / R.duration);
 
-      // Fade launch flash quickly
-      if (R.launchFlash) {
-        R.launchFlash.intensity = Math.max(0, 2.5 * (1 - R.age / 0.18));
-        if (R.age > 0.18) {
-          scene.remove(R.launchFlash);
-          R.launchFlash.dispose?.();
-          R.launchFlash = null;
-        }
-      }
-
-      // Natural decelerating curve near zenith
-      const ease = 1 - Math.pow(1 - progress, 2.2);
+      // Decelerating curve near peak
+      const ease = 1 - Math.pow(1 - progress, 2.0);
       const currX = THREE.MathUtils.lerp(R.startX, R.targetX, ease);
       const currY = THREE.MathUtils.lerp(R.startY, R.targetY, ease);
       const currZ = THREE.MathUtils.lerp(R.startZ, R.targetZ, ease);
 
-      // Shift trail positions backwards with slight air dispersion
+      if (R.rocketLight) {
+        R.rocketLight.position.set(currX, currY, currZ);
+      }
+
+      // Shift trail positions backwards with air dispersion
       for (let i = 31; i > 0; i--) {
-        R.positions[i * 3] = R.positions[(i - 1) * 3] + (Math.random() - 0.5) * 0.02;
-        R.positions[i * 3 + 1] = R.positions[(i - 1) * 3 + 1] - 0.07;
+        R.positions[i * 3] = R.positions[(i - 1) * 3] + (Math.random() - 0.5) * 0.03;
+        R.positions[i * 3 + 1] = R.positions[(i - 1) * 3 + 1] - 0.08;
         R.positions[i * 3 + 2] = R.positions[(i - 1) * 3 + 2];
       }
       R.positions[0] = currX;
@@ -723,9 +721,9 @@ function FireworksSystem({ bursts }) {
 
       // When rocket reaches target zenith -> DETONATE INTO SPARKS!
       if (progress >= 1.0) {
-        if (R.launchFlash) {
-          scene.remove(R.launchFlash);
-          R.launchFlash.dispose?.();
+        if (R.rocketLight) {
+          scene.remove(R.rocketLight);
+          R.rocketLight.dispose?.();
         }
         scene.remove(R.pts);
         R.geo.dispose();
@@ -741,26 +739,26 @@ function FireworksSystem({ bursts }) {
       const B = activeExplosionsRef.current[b];
       B.age += dt;
       const frac = B.age / B.life;
-      const gravityMult = B.type === 'willow' ? 3.9 : 2.4;
-      const dragMult = B.type === 'willow' ? 0.36 : 0.50;
+      const gravityMult = B.type === 'willow' ? 4.2 : 2.6;
+      const dragMult = B.type === 'willow' ? 0.35 : 0.48;
 
       // Update instantaneous flash light
       if (B.light) {
-        B.light.intensity = Math.max(0, 5.5 * (1 - B.age / 0.32));
-        if (B.age > 0.32) {
+        B.light.intensity = Math.max(0, 6.0 * (1 - B.age / 0.35));
+        if (B.age > 0.35) {
           scene.remove(B.light);
           B.light.dispose?.();
           B.light = null;
         }
       }
 
-      // Update Core Spark Flash (fades fast in 0.5s)
+      // Update Core Spark Flash (fades fast in 0.55s)
       if (B.core) {
         const cFrac = Math.min(1, B.age / 0.55);
         for (let k = 0; k < B.core.n; k++) {
-          B.core.vel[k * 3] *= 1 - 0.65 * dt;
-          B.core.vel[k * 3 + 1] *= 1 - 0.65 * dt;
-          B.core.vel[k * 3 + 2] *= 1 - 0.65 * dt;
+          B.core.vel[k * 3] *= 1 - 0.7 * dt;
+          B.core.vel[k * 3 + 1] *= 1 - 0.7 * dt;
+          B.core.vel[k * 3 + 2] *= 1 - 0.7 * dt;
           B.core.pos[k * 3] += B.core.vel[k * 3] * dt;
           B.core.pos[k * 3 + 1] += B.core.vel[k * 3 + 1] * dt;
           B.core.pos[k * 3 + 2] += B.core.vel[k * 3 + 2] * dt;
@@ -770,6 +768,7 @@ function FireworksSystem({ bursts }) {
       }
 
       // Update Main Starburst and Willow Particles
+      const twinkle = 0.88 + Math.sin(B.age * 22) * 0.12;
       [B.main, B.willow].forEach((ps) => {
         if (!ps) return;
         for (let k = 0; k < ps.n; k++) {
@@ -783,9 +782,6 @@ function FireworksSystem({ bursts }) {
           ps.pos[k * 3 + 2] += ps.vel[k * 3 + 2] * dt;
         }
         ps.geo.attributes.position.needsUpdate = true;
-
-        // Twinkle/flicker modulation as stars fade
-        const twinkle = 0.85 + Math.sin(B.age * 25 + k * 1.5) * 0.15;
         ps.mat.opacity = Math.max(0, (1 - frac * frac) * twinkle);
       });
 
