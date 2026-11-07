@@ -56,3 +56,4 @@ export function sampleTextCoordinates(text, count = 2000) {
   }
   return result;
 }
+
