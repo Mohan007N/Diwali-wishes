@@ -103,14 +103,14 @@ function Diya({ flameIntensity = 0 }) {
       [0.92, 0.16], [1.1, 0.32], [1.22, 0.48], [1.3, 0.62],
       [1.26, 0.68], [1.18, 0.6], [0.9, 0.42], [0.48, 0.3], [0.01, 0.28],
     ].map(([x, y]) => new THREE.Vector2(x, y));
-    return new THREE.LatheGeometry(pts, 56);
+    return new THREE.LatheGeometry(pts, 32);
   }, []);
 
   const rimProfile = useMemo(() => {
     const pts = [
       [1.18, 0.58], [1.32, 0.62], [1.34, 0.66], [1.28, 0.7], [1.18, 0.65],
     ].map(([x, y]) => new THREE.Vector2(x, y));
-    return new THREE.LatheGeometry(pts, 56);
+    return new THREE.LatheGeometry(pts, 32);
   }, []);
 
   // Embers data
@@ -176,7 +176,7 @@ function Diya({ flameIntensity = 0 }) {
 
   return (
     <group ref={groupRef}>
-      <mesh geometry={bowlProfile} position={[0, 0.12, 0]} castShadow receiveShadow>
+      <mesh geometry={bowlProfile} position={[0, 0.12, 0]}>
         <meshStandardMaterial
           color={0xc8681e} metalness={0.7} roughness={0.28}
           side={THREE.DoubleSide} emissive={0x3a0d00} emissiveIntensity={0.5}
@@ -232,8 +232,8 @@ function Diya({ flameIntensity = 0 }) {
         />
       </points>
 
-      <mesh position={[0, 0.01, 0]} receiveShadow>
-        <cylinderGeometry args={[3.2, 3.2, 0.06, 64]} />
+      <mesh position={[0, 0.01, 0]}>
+        <cylinderGeometry args={[3.2, 3.2, 0.06, 36]} />
         <meshStandardMaterial
           color={0x3a0e28} metalness={0.45} roughness={0.5}
           emissive={0x120408} emissiveIntensity={0.4}
@@ -241,7 +241,7 @@ function Diya({ flameIntensity = 0 }) {
       </mesh>
 
       <mesh position={[0, 0.04, 0]}>
-        <torusGeometry args={[3.18, 0.04, 8, 64]} />
+        <torusGeometry args={[3.18, 0.04, 6, 36]} />
         <meshStandardMaterial color={0xd4a64a} metalness={0.8} roughness={0.25} />
       </mesh>
     </group>
@@ -487,12 +487,13 @@ function CinematicFirstRocketAndMorph({ recipient, cinematicStage, onSequenceEve
     }
   }, []);
 
-  // Morph particles data (2200 points)
+  // Morph particles data (2200 points) with precomputed typed targets
   const morphState = useMemo(() => {
     const count = 2200;
     const pos = new Float32Array(count * 3);
     const vel = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
+    const targets = new Float32Array(count * 3);
     const delays = new Float32Array(count);
 
     const cWhite = new THREE.Color(0xFFFFFF);
@@ -500,43 +501,52 @@ function CinematicFirstRocketAndMorph({ recipient, cinematicStage, onSequenceEve
     const cAmber = new THREE.Color(0xFF9020);
 
     for (let i = 0; i < count; i++) {
+      const i3 = i * 3;
       // Start at explosion center (0, 3.2, -6.0)
-      pos[i * 3] = 0;
-      pos[i * 3 + 1] = 3.2;
-      pos[i * 3 + 2] = -6.0;
+      pos[i3] = 0;
+      pos[i3 + 1] = 3.2;
+      pos[i3 + 2] = -6.0;
 
       // Radial spherical initial burst velocity
       const phi = Math.acos(1 - (2 * (i + 0.5)) / count);
       const theta = Math.PI * (1 + Math.sqrt(5)) * i;
       const speed = 5.8 + Math.random() * 7.5;
 
-      vel[i * 3] = Math.cos(theta) * Math.sin(phi) * speed;
-      vel[i * 3 + 1] = Math.cos(phi) * speed;
-      vel[i * 3 + 2] = Math.sin(theta) * Math.sin(phi) * speed;
+      vel[i3] = Math.cos(theta) * Math.sin(phi) * speed;
+      vel[i3 + 1] = Math.cos(phi) * speed;
+      vel[i3 + 2] = Math.sin(theta) * Math.sin(phi) * speed;
 
       // Golden color palette
       const rnd = Math.random();
       const c = rnd > 0.65 ? cWhite : (rnd > 0.25 ? cGold : cAmber);
-      col[i * 3] = c.r;
-      col[i * 3 + 1] = c.g;
-      col[i * 3 + 2] = c.b;
+      col[i3] = c.r;
+      col[i3 + 1] = c.g;
+      col[i3 + 2] = c.b;
+
+      // Pre-fill target coordinate array to avoid object lookups in useFrame
+      const t = textTargets[i];
+      const tx = t ? t.x : 0;
+      const ty = t ? t.y : 3.2;
+      const tz = t ? t.z : -6.0;
+      targets[i3] = tx;
+      targets[i3 + 1] = ty;
+      targets[i3 + 2] = tz;
 
       // Progressively delay convergence left-to-right across letters
-      const target = textTargets[i];
-      const tx = target ? target.x : 0;
       delays[i] = 0.55 + Math.max(0, Math.min(1.2, ((tx + 5.5) / 11) * 1.05));
     }
 
-    return { pos, vel, col, delays, count, age: 0 };
+    return { pos, vel, col, targets, delays, count, age: 0 };
   }, [textTargets]);
 
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime;
     const rs = rocketState.current;
+    const safeDt = Math.min(dt, 0.033);
 
     // ── 1. Rocket Launch Ascent ──
     if (cinematicStage === 'ROCKET_LAUNCH') {
-      rs.age += dt;
+      rs.age += safeDt;
       const progress = Math.min(1.0, rs.age / rs.duration);
       const ease = 1 - Math.pow(1 - progress, 2.2);
       const currY = THREE.MathUtils.lerp(rs.startY, rs.targetY, ease);
@@ -551,9 +561,11 @@ function CinematicFirstRocketAndMorph({ recipient, cinematicStage, onSequenceEve
       // Shift trail points backwards
       const p = rs.trailPositions;
       for (let i = 35; i > 0; i--) {
-        p[i * 3] = p[(i - 1) * 3] + (Math.random() - 0.5) * 0.03;
-        p[i * 3 + 1] = p[(i - 1) * 3 + 1] - 0.08;
-        p[i * 3 + 2] = p[(i - 1) * 3 + 2];
+        const i3 = i * 3;
+        const prev3 = (i - 1) * 3;
+        p[i3] = p[prev3] + (Math.random() - 0.5) * 0.03;
+        p[i3 + 1] = p[prev3 + 1] - 0.08;
+        p[i3 + 2] = p[prev3 + 2];
       }
       p[0] = 0;
       p[1] = currY;
@@ -579,7 +591,7 @@ function CinematicFirstRocketAndMorph({ recipient, cinematicStage, onSequenceEve
       cinematicStage === 'INTERACTIVE_CELEBRATION';
 
     if (isExplodedStage) {
-      morphState.age += dt;
+      morphState.age += safeDt;
       const age = morphState.age;
 
       // Detonation flash light
@@ -589,51 +601,65 @@ function CinematicFirstRocketAndMorph({ recipient, cinematicStage, onSequenceEve
 
       const p = morphState.pos;
       const v = morphState.vel;
+      const targets = morphState.targets;
       const delays = morphState.delays;
       const count = morphState.count;
 
-      for (let i = 0; i < count; i++) {
-        const d = delays[i];
-        if (age < d) {
-          // Free radial explosion expansion with gravity & drag
-          v[i * 3 + 1] -= 2.0 * dt;
-          v[i * 3] *= 1 - 0.42 * dt;
-          v[i * 3 + 1] *= 1 - 0.42 * dt;
-          v[i * 3 + 2] *= 1 - 0.42 * dt;
+      if (age < 4.6) {
+        // Active morphing & explosion expansion phase
+        const freeDrag = 1 - 0.42 * safeDt;
+        const freeGrav = 2.0 * safeDt;
+        const steerFactor = 6.8 * safeDt;
+        // Damping calculated ONCE per frame outside the particle loop
+        const damping = Math.pow(0.86, safeDt * 60);
 
-          p[i * 3] += v[i * 3] * dt;
-          p[i * 3 + 1] += v[i * 3 + 1] * dt;
-          p[i * 3 + 2] += v[i * 3 + 2] * dt;
-        } else {
-          // Magnetic attraction steering towards assigned letter coordinate
-          const target = textTargets[i] || { x: 0, y: 3.2, z: -6.0 };
-          const dx = target.x - p[i * 3];
-          const dy = target.y - p[i * 3 + 1];
-          const dz = target.z - p[i * 3 + 2];
+        for (let i = 0; i < count; i++) {
+          const i3 = i * 3;
+          const i31 = i3 + 1;
+          const i32 = i3 + 2;
 
-          v[i * 3] += dx * 6.8 * dt;
-          v[i * 3 + 1] += dy * 6.8 * dt;
-          v[i * 3 + 2] += dz * 6.8 * dt;
+          if (age < delays[i]) {
+            // Free radial explosion expansion with gravity & drag
+            v[i31] -= freeGrav;
+            v[i3] *= freeDrag;
+            v[i31] *= freeDrag;
+            v[i32] *= freeDrag;
 
-          // Strong damping so particles lock crisply onto the letters
-          const damping = Math.pow(0.86, dt * 60);
-          v[i * 3] *= damping;
-          v[i * 3 + 1] *= damping;
-          v[i * 3 + 2] *= damping;
+            p[i3] += v[i3] * safeDt;
+            p[i31] += v[i31] * safeDt;
+            p[i32] += v[i32] * safeDt;
+          } else {
+            // Magnetic attraction steering towards assigned letter coordinate
+            const dx = targets[i3] - p[i3];
+            const dy = targets[i31] - p[i31];
+            const dz = targets[i32] - p[i32];
 
-          p[i * 3] += v[i * 3] * dt;
-          p[i * 3 + 1] += v[i * 3 + 1] * dt;
-          p[i * 3 + 2] += v[i * 3 + 2] * dt;
+            v[i3] = (v[i3] + dx * steerFactor) * damping;
+            v[i31] = (v[i31] + dy * steerFactor) * damping;
+            v[i32] = (v[i32] + dz * steerFactor) * damping;
 
-          // Gentle starry shimmer once formed
-          if (age > d + 1.2) {
-            p[i * 3 + 1] = target.y + Math.sin(t * 3.2 + i * 0.1) * 0.016;
+            p[i3] += v[i3] * safeDt;
+            p[i31] += v[i31] * safeDt;
+            p[i32] += v[i32] * safeDt;
           }
+        }
+        if (morphPointsRef.current) {
+          morphPointsRef.current.geometry.attributes.position.needsUpdate = true;
+        }
+      } else {
+        // Settled phase: Name is fully locked into letters
+        // Keep locked with subtle organic wave shimmer (zero vector physics overhead!)
+        const t3 = t * 2.8;
+        for (let i = 0; i < count; i += 2) {
+          const i31 = i * 3 + 1;
+          p[i31] = targets[i31] + Math.sin(t3 + i * 0.12) * 0.016;
+        }
+        if (morphPointsRef.current) {
+          morphPointsRef.current.geometry.attributes.position.needsUpdate = true;
         }
       }
 
       if (morphPointsRef.current) {
-        morphPointsRef.current.geometry.attributes.position.needsUpdate = true;
         // Keep particles glowing with golden brilliance
         const lateOpacity = age > 14.0 ? Math.max(0.45, 1.0 - (age - 14.0) * 0.08) : 0.95;
         morphPointsRef.current.material.opacity = lateOpacity;
@@ -756,14 +782,40 @@ function FireworksSystem({ bursts }) {
     return { pts, geo, mat, pos: pArr, vel: vArr, col: cArr, n: pArr.length / 3 };
   }, [scene, sparkTex]);
 
-  const createExplosion = useCallback((x, y, z, color, count = 320, type = 'chrysanthemum') => {
+  const createExplosion = useCallback((x, y, z, color, count = 260, type = 'chrysanthemum') => {
+    // Prune excess explosions if already 5 active to prevent frame drops
+    while (activeExplosionsRef.current.length >= 5) {
+      const oldest = activeExplosionsRef.current.shift();
+      if (oldest) {
+        if (oldest.light) {
+          scene.remove(oldest.light);
+          oldest.light.dispose?.();
+        }
+        if (oldest.main) {
+          scene.remove(oldest.main.pts);
+          oldest.main.geo.dispose();
+          oldest.main.mat.dispose();
+        }
+        if (oldest.core) {
+          scene.remove(oldest.core.pts);
+          oldest.core.geo.dispose();
+          oldest.core.mat.dispose();
+        }
+        if (oldest.willow) {
+          scene.remove(oldest.willow.pts);
+          oldest.willow.geo.dispose();
+          oldest.willow.mat.dispose();
+        }
+      }
+    }
+
     const hex = color || PALETTE[Math.floor(Math.random() * PALETTE.length)];
     const secHex = PALETTE[Math.floor(Math.random() * PALETTE.length)];
     const c1 = new THREE.Color(hex);
     const c2 = new THREE.Color(secHex);
 
-    // Tier 1: Main Spherical Shell
-    const n = Math.max(260, count);
+    // Tier 1: Main Spherical Shell (220 particles - lush & lightweight)
+    const n = Math.max(180, Math.min(240, count));
     const pos = new Float32Array(n * 3);
     const vel = new Float32Array(n * 3);
     const col = new Float32Array(n * 3);
@@ -771,7 +823,7 @@ function FireworksSystem({ bursts }) {
     for (let k = 0; k < n; k++) {
       const phi = Math.acos(1 - (2 * (k + 0.5)) / n);
       const theta = Math.PI * (1 + Math.sqrt(5)) * k;
-      const sp = (7.5 + Math.random() * 6.5) * (type === 'willow' ? 0.82 : 1.1);
+      const sp = (7.2 + Math.random() * 6.0) * (type === 'willow' ? 0.82 : 1.1);
 
       if (type === 'ring') {
         const ringAngle = (k / n) * Math.PI * 2;
@@ -795,8 +847,8 @@ function FireworksSystem({ bursts }) {
       col[k * 3 + 2] = mc.b;
     }
 
-    // Tier 2: High-Velocity White Core
-    const coreCount = 70;
+    // Tier 2: High-Velocity White Core (45 particles)
+    const coreCount = 45;
     const corePos = new Float32Array(coreCount * 3);
     const coreVel = new Float32Array(coreCount * 3);
     const coreCol = new Float32Array(coreCount * 3);
@@ -805,7 +857,7 @@ function FireworksSystem({ bursts }) {
     for (let k = 0; k < coreCount; k++) {
       const phi = Math.acos(1 - (2 * (k + 0.5)) / coreCount);
       const theta = Math.PI * (1 + Math.sqrt(5)) * k;
-      const csp = 8.5 + Math.random() * 7.5;
+      const csp = 8.5 + Math.random() * 7.0;
 
       coreVel[k * 3] = Math.cos(theta) * Math.sin(phi) * csp;
       coreVel[k * 3 + 1] = Math.cos(phi) * csp;
@@ -820,8 +872,8 @@ function FireworksSystem({ bursts }) {
       coreCol[k * 3 + 2] = whiteC.b;
     }
 
-    // Tier 3: Secondary Weeping Streamers
-    const willowCount = type === 'willow' ? 140 : 60;
+    // Tier 3: Secondary Weeping Streamers (50 particles)
+    const willowCount = type === 'willow' ? 80 : 45;
     const wPos = new Float32Array(willowCount * 3);
     const wVel = new Float32Array(willowCount * 3);
     const wCol = new Float32Array(willowCount * 3);
@@ -829,24 +881,24 @@ function FireworksSystem({ bursts }) {
 
     for (let k = 0; k < willowCount; k++) {
       const a = (k / willowCount) * Math.PI * 2;
-      const r = 0.6 + Math.random() * 2.0;
+      const r = 0.6 + Math.random() * 1.8;
       wPos[k * 3] = x;
       wPos[k * 3 + 1] = y;
       wPos[k * 3 + 2] = z;
-      wVel[k * 3] = Math.cos(a) * r * (2.2 + Math.random() * 2.5);
-      wVel[k * 3 + 1] = (Math.random() - 0.2) * r * 2.8;
-      wVel[k * 3 + 2] = Math.sin(a) * r * (2.2 + Math.random() * 2.5);
+      wVel[k * 3] = Math.cos(a) * r * (2.2 + Math.random() * 2.2);
+      wVel[k * 3 + 1] = (Math.random() - 0.2) * r * 2.5;
+      wVel[k * 3 + 2] = Math.sin(a) * r * (2.2 + Math.random() * 2.2);
       wCol[k * 3] = goldC.r;
       wCol[k * 3 + 1] = goldC.g;
       wCol[k * 3 + 2] = goldC.b;
     }
 
     const main = makePS(pos, vel, col, type === 'willow' ? 0.48 : 0.42);
-    const core = makePS(corePos, coreVel, coreCol, 0.55);
+    const core = makePS(corePos, coreVel, coreCol, 0.52);
     const willow = makePS(wPos, wVel, wCol, 0.35);
-    const burstLife = type === 'willow' ? 4.5 : 3.2;
+    const burstLife = type === 'willow' ? 4.0 : 3.0;
 
-    const flashLight = new THREE.PointLight(hex, 6.0, 50, 1.8);
+    const flashLight = new THREE.PointLight(hex, 5.0, 45, 1.8);
     flashLight.position.set(x, y, z);
     scene.add(flashLight);
 
@@ -933,9 +985,11 @@ function FireworksSystem({ bursts }) {
   }, [bursts, launchRocket]);
 
   useFrame((_, dt) => {
+    const safeDt = Math.min(dt, 0.033);
+
     for (let r = activeRocketsRef.current.length - 1; r >= 0; r--) {
       const R = activeRocketsRef.current[r];
-      R.age += dt;
+      R.age += safeDt;
       const progress = Math.min(1.0, R.age / R.duration);
 
       const ease = 1 - Math.pow(1 - progress, 2.0);
@@ -948,9 +1002,11 @@ function FireworksSystem({ bursts }) {
       }
 
       for (let i = 31; i > 0; i--) {
-        R.positions[i * 3] = R.positions[(i - 1) * 3] + (Math.random() - 0.5) * 0.03;
-        R.positions[i * 3 + 1] = R.positions[(i - 1) * 3 + 1] - 0.08;
-        R.positions[i * 3 + 2] = R.positions[(i - 1) * 3 + 2];
+        const i3 = i * 3;
+        const prev3 = (i - 1) * 3;
+        R.positions[i3] = R.positions[prev3] + (Math.random() - 0.5) * 0.03;
+        R.positions[i3 + 1] = R.positions[prev3 + 1] - 0.08;
+        R.positions[i3 + 2] = R.positions[prev3 + 2];
       }
       R.positions[0] = currX;
       R.positions[1] = currY;
@@ -973,13 +1029,13 @@ function FireworksSystem({ bursts }) {
 
     for (let b = activeExplosionsRef.current.length - 1; b >= 0; b--) {
       const B = activeExplosionsRef.current[b];
-      B.age += dt;
+      B.age += safeDt;
       const frac = B.age / B.life;
       const gravityMult = B.type === 'willow' ? 4.2 : 2.6;
       const dragMult = B.type === 'willow' ? 0.35 : 0.48;
 
       if (B.light) {
-        B.light.intensity = Math.max(0, 6.0 * (1 - B.age / 0.35));
+        B.light.intensity = Math.max(0, 5.0 * (1 - B.age / 0.35));
         if (B.age > 0.35) {
           scene.remove(B.light);
           B.light.dispose?.();
@@ -989,34 +1045,70 @@ function FireworksSystem({ bursts }) {
 
       if (B.core) {
         const cFrac = Math.min(1, B.age / 0.55);
+        const cDrag = 1 - 0.7 * safeDt;
+        const cPos = B.core.pos;
+        const cVel = B.core.vel;
         for (let k = 0; k < B.core.n; k++) {
-          B.core.vel[k * 3] *= 1 - 0.7 * dt;
-          B.core.vel[k * 3 + 1] *= 1 - 0.7 * dt;
-          B.core.vel[k * 3 + 2] *= 1 - 0.7 * dt;
-          B.core.pos[k * 3] += B.core.vel[k * 3] * dt;
-          B.core.pos[k * 3 + 1] += B.core.vel[k * 3 + 1] * dt;
-          B.core.pos[k * 3 + 2] += B.core.vel[k * 3 + 2] * dt;
+          const k3 = k * 3;
+          cVel[k3] *= cDrag;
+          cVel[k3 + 1] *= cDrag;
+          cVel[k3 + 2] *= cDrag;
+          cPos[k3] += cVel[k3] * safeDt;
+          cPos[k3 + 1] += cVel[k3 + 1] * safeDt;
+          cPos[k3 + 2] += cVel[k3 + 2] * safeDt;
         }
         B.core.geo.attributes.position.needsUpdate = true;
         B.core.mat.opacity = Math.max(0, 1 - cFrac * cFrac);
+        if (cFrac >= 1) {
+          scene.remove(B.core.pts);
+          B.core.geo.dispose();
+          B.core.mat.dispose();
+          B.core = null;
+        }
       }
 
       const twinkle = 0.88 + Math.sin(B.age * 22) * 0.12;
-      [B.main, B.willow].forEach((ps) => {
-        if (!ps) return;
-        for (let k = 0; k < ps.n; k++) {
-          ps.vel[k * 3 + 1] -= gravityMult * dt;
-          ps.vel[k * 3] *= 1 - dragMult * dt;
-          ps.vel[k * 3 + 1] *= 1 - dragMult * dt;
-          ps.vel[k * 3 + 2] *= 1 - dragMult * dt;
+      const drag = 1 - dragMult * safeDt;
+      const grav = gravityMult * safeDt;
+      const opacity = Math.max(0, (1 - frac * frac) * twinkle);
 
-          ps.pos[k * 3] += ps.vel[k * 3] * dt;
-          ps.pos[k * 3 + 1] += ps.vel[k * 3 + 1] * dt;
-          ps.pos[k * 3 + 2] += ps.vel[k * 3 + 2] * dt;
+      if (B.main) {
+        const ps = B.main;
+        const mPos = ps.pos;
+        const mVel = ps.vel;
+        for (let k = 0; k < ps.n; k++) {
+          const k3 = k * 3;
+          mVel[k3 + 1] -= grav;
+          mVel[k3] *= drag;
+          mVel[k3 + 1] *= drag;
+          mVel[k3 + 2] *= drag;
+
+          mPos[k3] += mVel[k3] * safeDt;
+          mPos[k3 + 1] += mVel[k3 + 1] * safeDt;
+          mPos[k3 + 2] += mVel[k3 + 2] * safeDt;
         }
         ps.geo.attributes.position.needsUpdate = true;
-        ps.mat.opacity = Math.max(0, (1 - frac * frac) * twinkle);
-      });
+        ps.mat.opacity = opacity;
+      }
+
+      if (B.willow) {
+        const ps = B.willow;
+        const wPos = ps.pos;
+        const wVel = ps.vel;
+        for (let k = 0; k < ps.n; k++) {
+          const k3 = k * 3;
+          wVel[k3 + 1] -= grav;
+          wVel[k3] *= drag;
+          wVel[k3 + 1] *= drag;
+          wVel[k3 + 2] *= drag;
+
+          wPos[k3] += wVel[k3] * safeDt;
+          wPos[k3 + 1] += wVel[k3 + 1] * safeDt;
+          wPos[k3 + 2] += wVel[k3 + 2] * safeDt;
+        }
+        ps.geo.attributes.position.needsUpdate = true;
+        ps.mat.opacity = opacity;
+      }
 
       if (B.age > B.life) {
         if (B.light) {
@@ -1024,13 +1116,21 @@ function FireworksSystem({ bursts }) {
           B.light.dispose?.();
           B.light = null;
         }
-        [B.main, B.core, B.willow].forEach((ps) => {
-          if (ps) {
-            scene.remove(ps.pts);
-            ps.geo.dispose();
-            ps.mat.dispose();
-          }
-        });
+        if (B.main) {
+          scene.remove(B.main.pts);
+          B.main.geo.dispose();
+          B.main.mat.dispose();
+        }
+        if (B.core) {
+          scene.remove(B.core.pts);
+          B.core.geo.dispose();
+          B.core.mat.dispose();
+        }
+        if (B.willow) {
+          scene.remove(B.willow.pts);
+          B.willow.geo.dispose();
+          B.willow.mat.dispose();
+        }
         activeExplosionsRef.current.splice(b, 1);
       }
     }
@@ -1049,7 +1149,7 @@ function CameraController({ cinematicStage }) {
       mouseRef.current.x = (e.clientX / window.innerWidth - 0.5) * 2;
       mouseRef.current.y = (e.clientY / window.innerHeight - 0.5) * 2;
     };
-    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointermove', handleMove, { passive: true });
     return () => window.removeEventListener('pointermove', handleMove);
   }, []);
 
@@ -1095,14 +1195,14 @@ function CameraController({ cinematicStage }) {
 /* ── Cinematic Effects (Bloom & Vignette) ──────── */
 function CinematicEffects() {
   return (
-    <EffectComposer>
+    <EffectComposer multisampling={0}>
       <Bloom
-        intensity={1.8}
-        luminanceThreshold={0.12}
-        luminanceSmoothing={0.9}
+        intensity={1.6}
+        luminanceThreshold={0.15}
+        luminanceSmoothing={0.85}
         mipmapBlur
       />
-      <Vignette eskil={false} offset={0.25} darkness={0.7} />
+      <Vignette eskil={false} offset={0.25} darkness={0.65} />
     </EffectComposer>
   );
 }
@@ -1123,19 +1223,21 @@ export default function ThreeScene({
     }
   }, []);
 
-  const dpr = useMemo(() => Math.min(window.devicePixelRatio || 1, 1.5), []);
+  const dpr = useMemo(() => Math.min(window.devicePixelRatio || 1, 1.25), []);
 
   return (
     <Canvas
       dpr={dpr}
-      camera={{ fov: 48, near: 0.1, far: 250, position: [0, 2.4, 8.5] }}
+      camera={{ fov: 48, near: 0.1, far: 200, position: [0, 2.4, 8.5] }}
       gl={{
-        antialias: true,
+        powerPreference: 'high-performance',
+        antialias: false,
+        depth: true,
+        stencil: false,
         alpha: false,
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: 1.15,
       }}
-      shadows
       style={{
         position: 'fixed',
         inset: 0,
@@ -1145,8 +1247,6 @@ export default function ThreeScene({
       }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 1);
-        gl.shadowMap.enabled = true;
-        gl.shadowMap.type = THREE.PCFSoftShadowMap;
       }}
     >
       <fog attach="fog" args={[0x000000, 0, 70]} />
@@ -1156,8 +1256,6 @@ export default function ThreeScene({
         position={[4, 8, 6]}
         intensity={0.4}
         color={0xffc88a}
-        castShadow
-        shadow-mapSize={[512, 512]}
       />
 
       {/* Dynamic Camera controller */}
@@ -1169,8 +1267,8 @@ export default function ThreeScene({
       {/* 3D Sacred Brass Diya */}
       <Diya flameIntensity={flameIntensity} />
 
-      {/* Sacred Rangoli */}
-      <Rangoli isActive={cinematicStage === 'ATMOSPHERE'} />
+      {/* Sacred Rangoli (Active in initial atmosphere stage) */}
+      {cinematicStage === 'ATMOSPHERE' && <Rangoli isActive={true} />}
 
       {/* Floating Sky Lanterns */}
       <Lanterns visible={flameIntensity > 0} flameIntensity={flameIntensity} />

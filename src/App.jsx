@@ -20,10 +20,10 @@ export default function App() {
 
   // Add a firework burst to the 3D scene (dual-stage rocket launch + detonation)
   const addBurst = useCallback(
-    (x, y, z, count = 260, color = null, type = 'chrysanthemum') => {
+    (x, y, z, count = 220, color = null, type = 'chrysanthemum') => {
       burstIdRef.current++;
       setFireworkBursts((prev) => [
-        ...prev.slice(-20), // Keep active bursts pool optimized
+        ...prev.slice(-10), // Keep active bursts pool tightly optimized
         { id: burstIdRef.current, x, y, z, count, color, type },
       ]);
       // Play launch whoosh immediately, followed by detonation boom at peak
@@ -40,7 +40,7 @@ export default function App() {
     (nx, ny) => {
       const types = ['chrysanthemum', 'peony', 'ring', 'willow'];
       const randomType = types[Math.floor(Math.random() * types.length)];
-      addBurst((nx - 0.5) * 18, (0.5 - ny) * 10 + 3.2, -7, 280, null, randomType);
+      addBurst((nx - 0.5) * 18, (0.5 - ny) * 10 + 3.2, -7, 220, null, randomType);
     },
     [addBurst]
   );
@@ -49,20 +49,20 @@ export default function App() {
   const triggerGrandShow = useCallback(() => {
     const launches = [
       [0, -7.5, 4.4, -7.0, '#FFD700', 'chrysanthemum'], // Left
-      [120, 7.5, 4.6, -7.0, '#00F0FF', 'peony'],        // Right
-      [280, 0, 5.8, -8.0, '#FF5E13', 'willow'],         // Center high willow
-      [450, -4.2, 5.2, -6.5, '#C743FF', 'ring'],        // Left-center ring
-      [600, 4.2, 5.0, -6.5, '#FF2A85', 'chrysanthemum'],// Right-center magenta
-      [850, -8.0, 3.8, -7.5, '#00FF87', 'peony'],       // Far left emerald
-      [1000, 8.0, 4.0, -7.5, '#FFEA00', 'willow'],      // Far right gold
-      [1300, -2.5, 6.2, -8.5, '#FFFFFF', 'chrysanthemum'], // Climax white-gold
-      [1450, 2.5, 6.0, -8.5, '#FF7A18', 'ring'],        // Climax saffron
-      [1750, 0, 6.6, -7.5, '#FFD700', 'willow'],        // Grand finale golden cascade
+      [140, 7.5, 4.6, -7.0, '#00F0FF', 'peony'],        // Right
+      [320, 0, 5.8, -8.0, '#FF5E13', 'willow'],         // Center high willow
+      [480, -4.2, 5.2, -6.5, '#C743FF', 'ring'],        // Left-center ring
+      [640, 4.2, 5.0, -6.5, '#FF2A85', 'chrysanthemum'],// Right-center magenta
+      [880, -8.0, 3.8, -7.5, '#00FF87', 'peony'],       // Far left emerald
+      [1040, 8.0, 4.0, -7.5, '#FFEA00', 'willow'],      // Far right gold
+      [1320, -2.5, 6.2, -8.5, '#FFFFFF', 'chrysanthemum'], // Climax white-gold
+      [1480, 2.5, 6.0, -8.5, '#FF7A18', 'ring'],        // Climax saffron
+      [1780, 0, 6.6, -7.5, '#FFD700', 'willow'],        // Grand finale golden cascade
     ];
 
     launches.forEach(([delay, x, y, z, color, type]) => {
       setTimeout(() => {
-        addBurst(x, y, z, 300, color, type);
+        addBurst(x, y, z, 220, color, type);
       }, delay);
     });
   }, [addBurst]);
@@ -75,7 +75,7 @@ export default function App() {
       setTimeout(() => {
         const x = -8 + Math.random() * 16;
         const y = 3.2 + Math.random() * 3.8;
-        addBurst(x, y, -7, 280, colors[i % colors.length], types[i % types.length]);
+        addBurst(x, y, -7, 220, colors[i % colors.length], types[i % types.length]);
       }, i * 90);
     }
   }, [addBurst]);
