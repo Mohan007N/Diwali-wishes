@@ -1,12 +1,13 @@
 /* ═══════════════════════════════════════════════
    DIWALI — The Festival of Lights 2026
    3D Canvas Scene — React Three Fiber
-   Photorealistic Fireworks & Night Sky Engine
+   Photorealistic Fireworks & Particle-To-Text Morphing Engine
    ═══════════════════════════════════════════════ */
 import React, { useRef, useMemo, useEffect, useCallback } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
 import * as THREE from 'three';
+import { sampleTextCoordinates } from '../utils/textParticleSampler';
 
 /* ── Procedural Glow Texture for Incandescent Sparks ── */
 function makeGlowTexture(inner, outer, size = 128) {
@@ -136,7 +137,6 @@ function Diya({ flameIntensity = 0 }) {
     const t = state.clock.elapsedTime;
     const intensity = flameIntensity;
 
-    // Flame flicker
     if (flameRef.current) {
       const f = 1 + Math.sin(t * 11) * 0.07 + Math.sin(t * 17.3) * 0.05 + Math.sin(t * 7.1) * 0.03;
       flameRef.current.scale.set(0.9 * intensity * f, 1.65 * intensity * f, 1);
@@ -154,7 +154,6 @@ function Diya({ flameIntensity = 0 }) {
       lightRef.current.intensity = intensity * (3.0 + Math.sin(t * 13) * 0.4);
     }
 
-    // Embers
     if (embersRef.current && intensity > 0.02) {
       const d = embersData;
       for (let i = 0; i < d.count; i++) {
@@ -177,7 +176,6 @@ function Diya({ flameIntensity = 0 }) {
 
   return (
     <group ref={groupRef}>
-      {/* Bowl */}
       <mesh geometry={bowlProfile} position={[0, 0.12, 0]} castShadow receiveShadow>
         <meshStandardMaterial
           color={0xc8681e} metalness={0.7} roughness={0.28}
@@ -185,7 +183,6 @@ function Diya({ flameIntensity = 0 }) {
         />
       </mesh>
 
-      {/* Decorative rim */}
       <mesh geometry={rimProfile} position={[0, 0.12, 0]}>
         <meshStandardMaterial
           color={0xd4a64a} metalness={0.8} roughness={0.2}
@@ -193,7 +190,6 @@ function Diya({ flameIntensity = 0 }) {
         />
       </mesh>
 
-      {/* Oil surface */}
       <mesh position={[0, 0.38, 0]}>
         <cylinderGeometry args={[0.45, 0.45, 0.05, 32]} />
         <meshStandardMaterial
@@ -202,13 +198,11 @@ function Diya({ flameIntensity = 0 }) {
         />
       </mesh>
 
-      {/* Wick */}
       <mesh position={[0, 0.56, 0]}>
         <cylinderGeometry args={[0.04, 0.05, 0.28, 8]} />
         <meshStandardMaterial color={0x1e0e08} roughness={1} />
       </mesh>
 
-      {/* Flame sprite */}
       <sprite ref={flameRef} position={[0, 1.16, 0]} scale={[0, 0, 1]}>
         <spriteMaterial
           map={textures.flame} blending={THREE.AdditiveBlending}
@@ -216,7 +210,6 @@ function Diya({ flameIntensity = 0 }) {
         />
       </sprite>
 
-      {/* Halo glow */}
       <sprite ref={haloRef} position={[0, 1.1, 0]} scale={[0, 0, 1]}>
         <spriteMaterial
           map={textures.halo} blending={THREE.AdditiveBlending}
@@ -224,10 +217,8 @@ function Diya({ flameIntensity = 0 }) {
         />
       </sprite>
 
-      {/* Flame point light */}
       <pointLight ref={lightRef} position={[0, 1.2, 0]} color={0xffa040} intensity={0} distance={20} decay={1.8} />
 
-      {/* Embers */}
       <points ref={embersRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -241,7 +232,6 @@ function Diya({ flameIntensity = 0 }) {
         />
       </points>
 
-      {/* Base plate */}
       <mesh position={[0, 0.01, 0]} receiveShadow>
         <cylinderGeometry args={[3.2, 3.2, 0.06, 64]} />
         <meshStandardMaterial
@@ -250,7 +240,6 @@ function Diya({ flameIntensity = 0 }) {
         />
       </mesh>
 
-      {/* Plate ornamental rim */}
       <mesh position={[0, 0.04, 0]}>
         <torusGeometry args={[3.18, 0.04, 8, 64]} />
         <meshStandardMaterial color={0xd4a64a} metalness={0.8} roughness={0.25} />
@@ -294,7 +283,6 @@ function Rangoli({ isActive }) {
     if (groupRef.current) {
       groupRef.current.rotation.y += dt * (isActive ? 0.18 : 0.06);
     }
-    // Particle orbit
     if (particlesRef.current) {
       const d = particleData;
       for (let i = 0; i < d.count; i++) {
@@ -309,7 +297,6 @@ function Rangoli({ isActive }) {
 
   const petals = useMemo(() => {
     const result = [];
-    // Outer ring - 24 petals
     for (let i = 0; i < 24; i++) {
       const a = (i / 24) * Math.PI * 2;
       result.push({
@@ -320,7 +307,6 @@ function Rangoli({ isActive }) {
         size: 0.22,
       });
     }
-    // Middle ring - 16 petals
     for (let i = 0; i < 16; i++) {
       const a = (i / 16) * Math.PI * 2 + 0.2;
       result.push({
@@ -331,7 +317,6 @@ function Rangoli({ isActive }) {
         size: 0.18,
       });
     }
-    // Inner ring - 12 petals
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2 + 0.35;
       result.push({
@@ -357,7 +342,6 @@ function Rangoli({ isActive }) {
         </mesh>
       ))}
 
-      {/* Center lotus */}
       <mesh position={[0, 0.06, 0]}>
         <cylinderGeometry args={[0.55, 0.55, 0.08, 32]} />
         <meshStandardMaterial
@@ -366,7 +350,6 @@ function Rangoli({ isActive }) {
         />
       </mesh>
 
-      {/* Floating particles */}
       <points ref={particlesRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -455,10 +438,277 @@ function Lanterns({ visible, flameIntensity }) {
 }
 
 /* ═══════════════════════════════════════════════════
-   PHOTOREALISTIC FIREWORKS ENGINE (Dual-Stage)
-   1. Real Rising Rocket Launch with Long Fiery Spark Tail
-   2. Detonation Starburst with Core Flash, Radial Stars,
-      Weeping Kamuro Willow Trails & Realistic Lighting
+   CINEMATIC FIRST ROCKET & PARTICLE-TO-TEXT MORPHING
+   Single 3D Rocket Launch → Apex Detonation →
+   Particles Rearrange & Assemble into Recipient's Name
+   ═══════════════════════════════════════════════════ */
+function CinematicFirstRocketAndMorph({ recipient, cinematicStage, onSequenceEvent }) {
+  const rocketGroupRef = useRef();
+  const trailPointsRef = useRef();
+  const rocketLightRef = useRef();
+  const burstLightRef = useRef();
+  const morphPointsRef = useRef();
+
+  const sparkTex = useMemo(
+    () => makeGlowTexture('rgba(255,255,255,1)', 'rgba(255,215,106,0.6)', 64),
+    []
+  );
+
+  // Sample target 3D text coordinates for dynamic name
+  const textTargets = useMemo(() => {
+    return sampleTextCoordinates(recipient || 'DIWALI', 2200);
+  }, [recipient]);
+
+  // Rocket ascent physics
+  const rocketState = useRef({
+    startY: -7.6,
+    targetY: 3.2,
+    targetZ: -6.0,
+    age: 0,
+    duration: 1.85,
+    exploded: false,
+    nameFormedEmitted: false,
+    grandShowEmitted: false,
+    trailPositions: new Float32Array(36 * 3),
+    trailColors: new Float32Array(36 * 3),
+  });
+
+  // Initialize rocket trail colors once
+  useMemo(() => {
+    const c1 = new THREE.Color(0xFFFFFF);
+    const c2 = new THREE.Color(0xFF7A18);
+    const col = rocketState.current.trailColors;
+    for (let i = 0; i < 36; i++) {
+      const frac = i / 36;
+      const c = new THREE.Color().lerpColors(c1, c2, frac);
+      col[i * 3] = c.r;
+      col[i * 3 + 1] = c.g;
+      col[i * 3 + 2] = c.b;
+    }
+  }, []);
+
+  // Morph particles data (2200 points)
+  const morphState = useMemo(() => {
+    const count = 2200;
+    const pos = new Float32Array(count * 3);
+    const vel = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    const delays = new Float32Array(count);
+
+    const cWhite = new THREE.Color(0xFFFFFF);
+    const cGold = new THREE.Color(0xFFD700);
+    const cAmber = new THREE.Color(0xFF9020);
+
+    for (let i = 0; i < count; i++) {
+      // Start at explosion center (0, 3.2, -6.0)
+      pos[i * 3] = 0;
+      pos[i * 3 + 1] = 3.2;
+      pos[i * 3 + 2] = -6.0;
+
+      // Radial spherical initial burst velocity
+      const phi = Math.acos(1 - (2 * (i + 0.5)) / count);
+      const theta = Math.PI * (1 + Math.sqrt(5)) * i;
+      const speed = 5.8 + Math.random() * 7.5;
+
+      vel[i * 3] = Math.cos(theta) * Math.sin(phi) * speed;
+      vel[i * 3 + 1] = Math.cos(phi) * speed;
+      vel[i * 3 + 2] = Math.sin(theta) * Math.sin(phi) * speed;
+
+      // Golden color palette
+      const rnd = Math.random();
+      const c = rnd > 0.65 ? cWhite : (rnd > 0.25 ? cGold : cAmber);
+      col[i * 3] = c.r;
+      col[i * 3 + 1] = c.g;
+      col[i * 3 + 2] = c.b;
+
+      // Progressively delay convergence left-to-right across letters
+      const target = textTargets[i];
+      const tx = target ? target.x : 0;
+      delays[i] = 0.55 + Math.max(0, Math.min(1.2, ((tx + 5.5) / 11) * 1.05));
+    }
+
+    return { pos, vel, col, delays, count, age: 0 };
+  }, [textTargets]);
+
+  useFrame((state, dt) => {
+    const t = state.clock.elapsedTime;
+    const rs = rocketState.current;
+
+    // ── 1. Rocket Launch Ascent ──
+    if (cinematicStage === 'ROCKET_LAUNCH') {
+      rs.age += dt;
+      const progress = Math.min(1.0, rs.age / rs.duration);
+      const ease = 1 - Math.pow(1 - progress, 2.2);
+      const currY = THREE.MathUtils.lerp(rs.startY, rs.targetY, ease);
+
+      if (rocketGroupRef.current) {
+        rocketGroupRef.current.position.set(0, currY, rs.targetZ);
+      }
+      if (rocketLightRef.current) {
+        rocketLightRef.current.position.set(0, currY, rs.targetZ);
+      }
+
+      // Shift trail points backwards
+      const p = rs.trailPositions;
+      for (let i = 35; i > 0; i--) {
+        p[i * 3] = p[(i - 1) * 3] + (Math.random() - 0.5) * 0.03;
+        p[i * 3 + 1] = p[(i - 1) * 3 + 1] - 0.08;
+        p[i * 3 + 2] = p[(i - 1) * 3 + 2];
+      }
+      p[0] = 0;
+      p[1] = currY;
+      p[2] = rs.targetZ;
+
+      if (trailPointsRef.current) {
+        trailPointsRef.current.geometry.attributes.position.needsUpdate = true;
+      }
+
+      // Detonate at apex!
+      if (progress >= 1.0 && !rs.exploded) {
+        rs.exploded = true;
+        onSequenceEvent?.('EXPLODE');
+      }
+    }
+
+    // ── 2. Apex Detonation & Particle-to-Text Morphing ──
+    const isExplodedStage =
+      cinematicStage === 'FIREWORK_EXPLOSION' ||
+      cinematicStage === 'PARTICLE_NAME_REVEAL' ||
+      cinematicStage === 'NAME_AND_WISH_REVEAL' ||
+      cinematicStage === 'GRAND_FIREWORKS' ||
+      cinematicStage === 'INTERACTIVE_CELEBRATION';
+
+    if (isExplodedStage) {
+      morphState.age += dt;
+      const age = morphState.age;
+
+      // Detonation flash light
+      if (burstLightRef.current) {
+        burstLightRef.current.intensity = Math.max(0, 9.0 * (1 - age / 0.45));
+      }
+
+      const p = morphState.pos;
+      const v = morphState.vel;
+      const delays = morphState.delays;
+      const count = morphState.count;
+
+      for (let i = 0; i < count; i++) {
+        const d = delays[i];
+        if (age < d) {
+          // Free radial explosion expansion with gravity & drag
+          v[i * 3 + 1] -= 2.0 * dt;
+          v[i * 3] *= 1 - 0.42 * dt;
+          v[i * 3 + 1] *= 1 - 0.42 * dt;
+          v[i * 3 + 2] *= 1 - 0.42 * dt;
+
+          p[i * 3] += v[i * 3] * dt;
+          p[i * 3 + 1] += v[i * 3 + 1] * dt;
+          p[i * 3 + 2] += v[i * 3 + 2] * dt;
+        } else {
+          // Magnetic attraction steering towards assigned letter coordinate
+          const target = textTargets[i] || { x: 0, y: 3.2, z: -6.0 };
+          const dx = target.x - p[i * 3];
+          const dy = target.y - p[i * 3 + 1];
+          const dz = target.z - p[i * 3 + 2];
+
+          v[i * 3] += dx * 6.8 * dt;
+          v[i * 3 + 1] += dy * 6.8 * dt;
+          v[i * 3 + 2] += dz * 6.8 * dt;
+
+          // Strong damping so particles lock crisply onto the letters
+          const damping = Math.pow(0.86, dt * 60);
+          v[i * 3] *= damping;
+          v[i * 3 + 1] *= damping;
+          v[i * 3 + 2] *= damping;
+
+          p[i * 3] += v[i * 3] * dt;
+          p[i * 3 + 1] += v[i * 3 + 1] * dt;
+          p[i * 3 + 2] += v[i * 3 + 2] * dt;
+
+          // Gentle starry shimmer once formed
+          if (age > d + 1.2) {
+            p[i * 3 + 1] = target.y + Math.sin(t * 3.2 + i * 0.1) * 0.016;
+          }
+        }
+      }
+
+      if (morphPointsRef.current) {
+        morphPointsRef.current.geometry.attributes.position.needsUpdate = true;
+        // Keep particles glowing with golden brilliance
+        const lateOpacity = age > 14.0 ? Math.max(0.45, 1.0 - (age - 14.0) * 0.08) : 0.95;
+        morphPointsRef.current.material.opacity = lateOpacity;
+      }
+
+      // Milestones
+      if (age >= 3.6 && !rs.nameFormedEmitted) {
+        rs.nameFormedEmitted = true;
+        onSequenceEvent?.('NAME_FORMED');
+      }
+      if (age >= 6.8 && !rs.grandShowEmitted) {
+        rs.grandShowEmitted = true;
+        onSequenceEvent?.('START_GRAND_SHOW');
+      }
+    }
+  });
+
+  return (
+    <>
+      {/* ── 1. The Single Ascending Rocket ── */}
+      {cinematicStage === 'ROCKET_LAUNCH' && (
+        <>
+          <group ref={rocketGroupRef} position={[0, -7.6, -6.0]}>
+            {/* White-hot rocket head sprite */}
+            <sprite scale={[0.42, 0.42, 1]}>
+              <spriteMaterial map={sparkTex} color="#FFFFFF" blending={THREE.AdditiveBlending} />
+            </sprite>
+          </group>
+
+          {/* Rocket Ascent Glow Light */}
+          <pointLight ref={rocketLightRef} position={[0, -7.6, -6.0]} color="#FFD76A" intensity={3.5} distance={16} />
+
+          {/* Rocket Fiery Trail */}
+          <points ref={trailPointsRef}>
+            <bufferGeometry>
+              <bufferAttribute attach="attributes-position" count={36} array={rocketState.current.trailPositions} itemSize={3} />
+              <bufferAttribute attach="attributes-color" count={36} array={rocketState.current.trailColors} itemSize={3} />
+            </bufferGeometry>
+            <pointsMaterial size={0.38} map={sparkTex} vertexColors transparent blending={THREE.AdditiveBlending} depthWrite={false} />
+          </points>
+        </>
+      )}
+
+      {/* ── 2. Apex Detonation Flash Light ── */}
+      <pointLight ref={burstLightRef} position={[0, 3.2, -6.0]} color="#FFF4DD" intensity={0} distance={55} decay={1.8} />
+
+      {/* ── 3. The 2200 Morphing Text Particles ── */}
+      {(cinematicStage === 'FIREWORK_EXPLOSION' ||
+        cinematicStage === 'PARTICLE_NAME_REVEAL' ||
+        cinematicStage === 'NAME_AND_WISH_REVEAL' ||
+        cinematicStage === 'GRAND_FIREWORKS' ||
+        cinematicStage === 'INTERACTIVE_CELEBRATION') && (
+        <points ref={morphPointsRef}>
+          <bufferGeometry>
+            <bufferAttribute attach="attributes-position" count={morphState.count} array={morphState.pos} itemSize={3} />
+            <bufferAttribute attach="attributes-color" count={morphState.count} array={morphState.col} itemSize={3} />
+          </bufferGeometry>
+          <pointsMaterial
+            size={0.42}
+            map={sparkTex}
+            vertexColors
+            transparent
+            opacity={0.95}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+          />
+        </points>
+      )}
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   PHOTOREALISTIC FIREWORKS ENGINE (Multi-Bursts)
+   Grand Fireworks Show + Interactive Sky Clicking
    ═══════════════════════════════════════════════════ */
 function FireworksSystem({ bursts }) {
   const { scene } = useThree();
@@ -470,7 +720,6 @@ function FireworksSystem({ bursts }) {
     []
   );
 
-  // Metal salt festive color palettes
   const PALETTE = useMemo(
     () => [
       0xFFD700, // Imperial Pure Gold
@@ -487,7 +736,6 @@ function FireworksSystem({ bursts }) {
     []
   );
 
-  // Helper to create Points particle system
   const makePS = useCallback((pArr, vArr, cArr, sz) => {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pArr, 3));
@@ -508,14 +756,13 @@ function FireworksSystem({ bursts }) {
     return { pts, geo, mat, pos: pArr, vel: vArr, col: cArr, n: pArr.length / 3 };
   }, [scene, sparkTex]);
 
-  // Create real expanding explosion when rocket detonates at target
   const createExplosion = useCallback((x, y, z, color, count = 320, type = 'chrysanthemum') => {
     const hex = color || PALETTE[Math.floor(Math.random() * PALETTE.length)];
     const secHex = PALETTE[Math.floor(Math.random() * PALETTE.length)];
     const c1 = new THREE.Color(hex);
     const c2 = new THREE.Color(secHex);
 
-    // ── Tier 1: Main Spherical Starburst Shell ──
+    // Tier 1: Main Spherical Shell
     const n = Math.max(260, count);
     const pos = new Float32Array(n * 3);
     const vel = new Float32Array(n * 3);
@@ -548,7 +795,7 @@ function FireworksSystem({ bursts }) {
       col[k * 3 + 2] = mc.b;
     }
 
-    // ── Tier 2: High-Velocity White-Hot Core Flash ──
+    // Tier 2: High-Velocity White Core
     const coreCount = 70;
     const corePos = new Float32Array(coreCount * 3);
     const coreVel = new Float32Array(coreCount * 3);
@@ -573,7 +820,7 @@ function FireworksSystem({ bursts }) {
       coreCol[k * 3 + 2] = whiteC.b;
     }
 
-    // ── Tier 3: Secondary Weeping Willow Streamers ──
+    // Tier 3: Secondary Weeping Streamers
     const willowCount = type === 'willow' ? 140 : 60;
     const wPos = new Float32Array(willowCount * 3);
     const wVel = new Float32Array(willowCount * 3);
@@ -599,7 +846,6 @@ function FireworksSystem({ bursts }) {
     const willow = makePS(wPos, wVel, wCol, 0.35);
     const burstLife = type === 'willow' ? 4.5 : 3.2;
 
-    // Instantaneous High-Intensity Flash Light
     const flashLight = new THREE.PointLight(hex, 6.0, 50, 1.8);
     flashLight.position.set(x, y, z);
     scene.add(flashLight);
@@ -615,7 +861,6 @@ function FireworksSystem({ bursts }) {
     });
   }, [PALETTE, makePS, scene]);
 
-  // Launch a single rocket towards target coordinates
   const launchRocket = useCallback((burst) => {
     const { x, y, z, color, count = 320, type = 'chrysanthemum' } = burst;
 
@@ -623,7 +868,6 @@ function FireworksSystem({ bursts }) {
     const startY = -7.5;
     const startZ = z;
 
-    // Rocket trail: 32 trailing spark particles for glowing plume
     const trailCount = 32;
     const trailPositions = new Float32Array(trailCount * 3);
     const trailColors = new Float32Array(trailCount * 3);
@@ -655,7 +899,6 @@ function FireworksSystem({ bursts }) {
     const pts = new THREE.Points(geo, mat);
     scene.add(pts);
 
-    // Launch rocket head glow light
     const rocketLight = new THREE.PointLight(0xFFB020, 2.8, 15, 2);
     rocketLight.position.set(startX, startY, startZ);
     scene.add(rocketLight);
@@ -673,14 +916,13 @@ function FireworksSystem({ bursts }) {
       targetZ: z,
       positions: trailPositions,
       age: 0,
-      duration: 0.38, // Fast powerful launch ascent
+      duration: 0.38,
       color,
       count,
       type,
     });
   }, [scene, sparkTex]);
 
-  // Handle incoming burst requests: Process ALL unhandled bursts
   useEffect(() => {
     if (!bursts || bursts.length === 0) return;
     bursts.forEach((b) => {
@@ -690,15 +932,12 @@ function FireworksSystem({ bursts }) {
     });
   }, [bursts, launchRocket]);
 
-  // Frame Loop: Update Physics for Rockets and Expanding Shells
   useFrame((_, dt) => {
-    // 1. Update Rockets Shooting Up into the Sky
     for (let r = activeRocketsRef.current.length - 1; r >= 0; r--) {
       const R = activeRocketsRef.current[r];
       R.age += dt;
       const progress = Math.min(1.0, R.age / R.duration);
 
-      // Decelerating curve near peak
       const ease = 1 - Math.pow(1 - progress, 2.0);
       const currX = THREE.MathUtils.lerp(R.startX, R.targetX, ease);
       const currY = THREE.MathUtils.lerp(R.startY, R.targetY, ease);
@@ -708,7 +947,6 @@ function FireworksSystem({ bursts }) {
         R.rocketLight.position.set(currX, currY, currZ);
       }
 
-      // Shift trail positions backwards with air dispersion
       for (let i = 31; i > 0; i--) {
         R.positions[i * 3] = R.positions[(i - 1) * 3] + (Math.random() - 0.5) * 0.03;
         R.positions[i * 3 + 1] = R.positions[(i - 1) * 3 + 1] - 0.08;
@@ -719,7 +957,6 @@ function FireworksSystem({ bursts }) {
       R.positions[2] = currZ;
       R.geo.attributes.position.needsUpdate = true;
 
-      // When rocket reaches target zenith -> DETONATE INTO SPARKS!
       if (progress >= 1.0) {
         if (R.rocketLight) {
           scene.remove(R.rocketLight);
@@ -734,7 +971,6 @@ function FireworksSystem({ bursts }) {
       }
     }
 
-    // 2. Update Expanding Explosions & Spark Physics
     for (let b = activeExplosionsRef.current.length - 1; b >= 0; b--) {
       const B = activeExplosionsRef.current[b];
       B.age += dt;
@@ -742,7 +978,6 @@ function FireworksSystem({ bursts }) {
       const gravityMult = B.type === 'willow' ? 4.2 : 2.6;
       const dragMult = B.type === 'willow' ? 0.35 : 0.48;
 
-      // Update instantaneous flash light
       if (B.light) {
         B.light.intensity = Math.max(0, 6.0 * (1 - B.age / 0.35));
         if (B.age > 0.35) {
@@ -752,7 +987,6 @@ function FireworksSystem({ bursts }) {
         }
       }
 
-      // Update Core Spark Flash (fades fast in 0.55s)
       if (B.core) {
         const cFrac = Math.min(1, B.age / 0.55);
         for (let k = 0; k < B.core.n; k++) {
@@ -767,7 +1001,6 @@ function FireworksSystem({ bursts }) {
         B.core.mat.opacity = Math.max(0, 1 - cFrac * cFrac);
       }
 
-      // Update Main Starburst and Willow Particles
       const twinkle = 0.88 + Math.sin(B.age * 22) * 0.12;
       [B.main, B.willow].forEach((ps) => {
         if (!ps) return;
@@ -785,7 +1018,6 @@ function FireworksSystem({ bursts }) {
         ps.mat.opacity = Math.max(0, (1 - frac * frac) * twinkle);
       });
 
-      // Cleanup expired explosion
       if (B.age > B.life) {
         if (B.light) {
           scene.remove(B.light);
@@ -808,7 +1040,7 @@ function FireworksSystem({ bursts }) {
 }
 
 /* ── Cinematic Camera Controller ───────────────── */
-function CameraController({ currentScene }) {
+function CameraController({ cinematicStage }) {
   const { camera } = useThree();
   const mouseRef = useRef({ x: 0, y: 0 });
 
@@ -821,29 +1053,40 @@ function CameraController({ currentScene }) {
     return () => window.removeEventListener('pointermove', handleMove);
   }, []);
 
-  const targets = useMemo(() => [
-    { x: 0, y: 2.4, z: 8.5 },
-    { x: 0, y: 2.0, z: 7.0 },
-    { x: 0, y: 3.5, z: 7.5 },
-    { x: 0, y: 2.5, z: 8.0 },
-    { x: 0, y: 2.0, z: 8.5 },
-    { x: 0, y: 2.5, z: 8.5 },
-  ], []);
-
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime;
-    const target = targets[currentScene] || targets[0];
     const mx = mouseRef.current.x;
     const my = mouseRef.current.y;
 
-    const camX = Math.sin(t * 0.1) * 0.8 + mx * 0.6;
-    const camY = target.y + Math.sin(t * 0.28) * 0.15 - my * 0.3;
-    const camZ = target.z;
+    let targetY = 2.4;
+    let targetZ = 8.5;
 
-    camera.position.x += (camX - camera.position.x) * dt * 1.8;
-    camera.position.y += (camY - camera.position.y) * dt * 1.8;
-    camera.position.z += (camZ - camera.position.z) * dt * 1.8;
-    camera.lookAt(0, 0.2, 0);
+    if (cinematicStage === 'ROCKET_LAUNCH') {
+      targetY = 2.8;
+      targetZ = 8.2;
+    } else if (
+      cinematicStage === 'FIREWORK_EXPLOSION' ||
+      cinematicStage === 'PARTICLE_NAME_REVEAL' ||
+      cinematicStage === 'NAME_AND_WISH_REVEAL'
+    ) {
+      targetY = 3.2;
+      targetZ = 7.8;
+    } else if (
+      cinematicStage === 'GRAND_FIREWORKS' ||
+      cinematicStage === 'INTERACTIVE_CELEBRATION'
+    ) {
+      targetY = 2.6;
+      targetZ = 8.6;
+    }
+
+    const camX = Math.sin(t * 0.1) * 0.6 + mx * 0.5;
+    const camY = targetY + Math.sin(t * 0.25) * 0.12 - my * 0.25;
+    const camZ = targetZ;
+
+    camera.position.x += (camX - camera.position.x) * dt * 1.6;
+    camera.position.y += (camY - camera.position.y) * dt * 1.6;
+    camera.position.z += (camZ - camera.position.z) * dt * 1.6;
+    camera.lookAt(0, targetY > 3.0 ? 2.8 : 0.4, 0);
   });
 
   return null;
@@ -866,7 +1109,9 @@ function CinematicEffects() {
 
 /* ── Main 3D Canvas Scene ─────────────────────── */
 export default function ThreeScene({
-  currentScene,
+  recipient,
+  cinematicStage,
+  onSequenceEvent,
   flameIntensity,
   fireworkBursts,
 }) {
@@ -906,7 +1151,6 @@ export default function ThreeScene({
     >
       <fog attach="fog" args={[0x000000, 0, 70]} />
 
-      {/* Ambient lighting */}
       <ambientLight intensity={0.8} color={0x3a2a66} />
       <directionalLight
         position={[4, 8, 6]}
@@ -916,8 +1160,8 @@ export default function ThreeScene({
         shadow-mapSize={[512, 512]}
       />
 
-      {/* Camera controller */}
-      <CameraController currentScene={currentScene} />
+      {/* Dynamic Camera controller */}
+      <CameraController cinematicStage={cinematicStage} />
 
       {/* Starry Night Sky */}
       <Stars />
@@ -926,12 +1170,19 @@ export default function ThreeScene({
       <Diya flameIntensity={flameIntensity} />
 
       {/* Sacred Rangoli */}
-      <Rangoli isActive={currentScene === 2} />
+      <Rangoli isActive={cinematicStage === 'ATMOSPHERE'} />
 
       {/* Floating Sky Lanterns */}
-      <Lanterns visible={currentScene >= 1 && flameIntensity > 0} flameIntensity={flameIntensity} />
+      <Lanterns visible={flameIntensity > 0} flameIntensity={flameIntensity} />
 
-      {/* Photorealistic Skycracker & Fireworks Engine */}
+      {/* The Masterpiece: Rocket Launch & Particle-To-Text Morphing Engine */}
+      <CinematicFirstRocketAndMorph
+        recipient={recipient}
+        cinematicStage={cinematicStage}
+        onSequenceEvent={onSequenceEvent}
+      />
+
+      {/* Grand Fireworks Show & Interactive Sky Fireworks */}
       <FireworksSystem bursts={fireworkBursts} />
 
       {/* Post-processing Bloom & Glow */}

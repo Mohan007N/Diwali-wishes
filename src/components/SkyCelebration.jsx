@@ -1,9 +1,11 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function SkyCelebration({
   recipient,
+  cinematicStage,
   onLaunchCracker,
+  onBurstSkyButton,
   onSwipeDown,
   isMuted,
   onToggleMute,
@@ -18,7 +20,6 @@ export default function SkyCelebration({
 
   const handleTouchEnd = (e) => {
     const deltaY = touchStartY.current - e.changedTouches[0].clientY;
-    // Swiping finger up (pulling lower page up) by more than 40px
     if (deltaY > 40) {
       onSwipeDown?.();
     }
@@ -31,7 +32,6 @@ export default function SkyCelebration({
   };
 
   const handleSkyClick = (e) => {
-    // Avoid triggering if clicked on top controls or bottom button
     if (e.target.closest('button') || e.target.closest('[data-no-burst]')) return;
     const nx = e.clientX / window.innerWidth;
     const ny = e.clientY / window.innerHeight;
@@ -39,6 +39,15 @@ export default function SkyCelebration({
       onLaunchCracker(nx, ny);
     }
   };
+
+  const isNameRevealed =
+    cinematicStage === 'NAME_AND_WISH_REVEAL' ||
+    cinematicStage === 'GRAND_FIREWORKS' ||
+    cinematicStage === 'INTERACTIVE_CELEBRATION';
+
+  const isInteractive =
+    cinematicStage === 'GRAND_FIREWORKS' ||
+    cinematicStage === 'INTERACTIVE_CELEBRATION';
 
   return (
     <section
@@ -58,7 +67,7 @@ export default function SkyCelebration({
         padding: '24px 20px 32px',
         boxSizing: 'border-box',
         overflow: 'hidden',
-        cursor: 'crosshair',
+        cursor: isInteractive ? 'crosshair' : 'default',
         userSelect: 'none',
       }}
     >
@@ -80,7 +89,7 @@ export default function SkyCelebration({
             style={{
               fontFamily: "'Cinzel', serif",
               fontSize: '0.82rem',
-              letterSpacing: '0.2em',
+              letterSpacing: '0.22em',
               color: '#FFD76A',
               textTransform: 'uppercase',
             }}
@@ -123,7 +132,7 @@ export default function SkyCelebration({
         </div>
       </header>
 
-      {/* ── Middle: Grand Name & Diwali Reveal ── */}
+      {/* ── Middle: Dynamic Storytelling Center ── */}
       <div
         data-no-burst
         style={{
@@ -134,109 +143,220 @@ export default function SkyCelebration({
           zIndex: 5,
           pointerEvents: 'none',
           padding: '0 16px',
+          maxWidth: '920px',
         }}
       >
-        {/* Top spark emblem */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8 }}
-          style={{
-            fontFamily: "'Cinzel', serif",
-            fontSize: 'clamp(0.75rem, 2.5vw, 1.05rem)',
-            letterSpacing: '0.35em',
-            color: '#FFD76A',
-            textTransform: 'uppercase',
-            marginBottom: '10px',
-            textShadow: '0 0 15px rgba(255, 215, 106, 0.5)',
-          }}
-        >
-          ✨ A Celestial Celebration For ✨
-        </motion.div>
-
-        {/* The Recipient's Name in Metallic Gold */}
-        <motion.h1
-          initial={{ opacity: 0, y: 30, scale: 0.85 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 1, ease: 'easeOut' }}
-          style={{
-            margin: '0',
-            fontFamily: "'Cinzel', serif",
-            fontSize: 'clamp(2.8rem, 10vw, 6.8rem)',
-            fontWeight: 800,
-            lineHeight: 1.05,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            background: 'linear-gradient(180deg, #FFFFFF 0%, #FFD76A 25%, #D4A64A 60%, #FF8A24 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            filter: 'drop-shadow(0 0 35px rgba(255, 215, 106, 0.65)) drop-shadow(0 0 70px rgba(255, 138, 36, 0.35))',
-          }}
-        >
-          {letters.map((char, i) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
+        <AnimatePresence mode="wait">
+          {/* Initial Atmosphere Title (No Name) */}
+          {cinematicStage === 'ATMOSPHERE' && (
+            <motion.div
+              key="atmosphere"
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 + i * 0.05 }}
-              style={{ display: 'inline-block' }}
+              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.5 } }}
+              transition={{ duration: 1 }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
             >
-              {char === ' ' ? '\u00A0' : char}
-            </motion.span>
-          ))}
-        </motion.h1>
+              <p
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: 'clamp(0.8rem, 2.5vw, 1.1rem)',
+                  letterSpacing: '0.35em',
+                  color: '#FFD76A',
+                  textTransform: 'uppercase',
+                  marginBottom: '10px',
+                }}
+              >
+                Diwali 2026
+              </p>
+              <h1
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: 'clamp(1.8rem, 5vw, 3.2rem)',
+                  fontWeight: 700,
+                  margin: 0,
+                  background: 'linear-gradient(180deg, #FFFFFF 0%, #FFD76A 40%, #D4A64A 75%, #FF8A24 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  letterSpacing: '0.08em',
+                }}
+              >
+                A Celestial Celebration of Light
+              </h1>
+            </motion.div>
+          )}
 
-        {/* Happy Diwali Subtitle */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-          style={{
-            fontFamily: "'Cinzel', serif",
-            fontSize: 'clamp(1.1rem, 3.8vw, 2.2rem)',
-            fontWeight: 700,
-            letterSpacing: '0.22em',
-            color: '#FFF4DD',
-            textTransform: 'uppercase',
-            marginTop: '12px',
-            textShadow: '0 0 20px rgba(212, 166, 74, 0.6)',
-          }}
-        >
-          Happy Diwali 2026
-        </motion.div>
+          {/* When Name Emerges From The Firework Explosion */}
+          {isNameRevealed && (
+            <motion.div
+              key="name-revealed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1.2 }}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            >
+              {/* Top Spark Emblem */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.6 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8, delay: 0.1 }}
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: 'clamp(0.75rem, 2.4vw, 1.02rem)',
+                  letterSpacing: '0.35em',
+                  color: '#FFD76A',
+                  textTransform: 'uppercase',
+                  marginBottom: '10px',
+                  textShadow: '0 0 16px rgba(255, 215, 106, 0.6)',
+                }}
+              >
+                ✨ A Celestial Celebration For ✨
+              </motion.div>
 
-        {/* Sky Tap Hint */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.75 }}
-          transition={{ duration: 0.8, delay: 1.3 }}
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontStyle: 'italic',
-            fontSize: 'clamp(0.85rem, 2vw, 1.05rem)',
-            color: '#a899cc',
-            marginTop: '14px',
-            letterSpacing: '0.05em',
-          }}
-        >
-          ✦ Tap anywhere in the sky to burst colorful crackers ✦
-        </motion.p>
+              {/* The Recipient's Name in Metallic 3D Gold */}
+              <motion.h1
+                initial={{ opacity: 0, scale: 0.8, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.3, ease: 'easeOut' }}
+                style={{
+                  margin: '0',
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: 'clamp(2.8rem, 9.5vw, 6.4rem)',
+                  fontWeight: 800,
+                  lineHeight: 1.05,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  background: 'linear-gradient(180deg, #FFFFFF 0%, #FFD76A 25%, #D4A64A 60%, #FF8A24 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  filter: 'drop-shadow(0 0 30px rgba(255, 215, 106, 0.75)) drop-shadow(0 0 60px rgba(255, 138, 36, 0.4))',
+                }}
+              >
+                {letters.map((char, i) => (
+                  <motion.span
+                    key={i}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.4 + i * 0.05 }}
+                    style={{ display: 'inline-block' }}
+                  >
+                    {char === ' ' ? '\u00A0' : char}
+                  </motion.span>
+                ))}
+              </motion.h1>
+
+              {/* Diwali Wish Message */}
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.9, delay: 1.1 }}
+                style={{ marginTop: '14px', maxWidth: '680px' }}
+              >
+                <div
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: 'clamp(1.1rem, 3.6vw, 2.1rem)',
+                    fontWeight: 700,
+                    letterSpacing: '0.22em',
+                    color: '#FFF4DD',
+                    textTransform: 'uppercase',
+                    textShadow: '0 0 22px rgba(212, 166, 74, 0.65)',
+                    marginBottom: '8px',
+                  }}
+                >
+                  ✨ Happy Diwali 2026 ✨
+                </div>
+
+                <p
+                  style={{
+                    fontFamily: "'Cormorant Garamond', Georgia, serif",
+                    fontStyle: 'italic',
+                    fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
+                    color: '#FFF4DD',
+                    lineHeight: 1.5,
+                    opacity: 0.92,
+                    margin: 0,
+                    textShadow: '0 2px 10px rgba(0,0,0,0.8)',
+                  }}
+                >
+                  "May your life shine brighter than a thousand stars, may happiness illuminate your home, and may prosperity follow you in every step."
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Interactive Sky Clicking / Burst Hint */}
+        {isInteractive && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.85 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            style={{ marginTop: '16px' }}
+          >
+            <p
+              style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                fontStyle: 'italic',
+                fontSize: 'clamp(0.85rem, 2vw, 1.02rem)',
+                color: '#a899cc',
+                letterSpacing: '0.06em',
+                margin: 0,
+              }}
+            >
+              ✦ Tap anywhere in the sky to launch fireworks ✦
+            </p>
+          </motion.div>
+        )}
       </div>
 
-      {/* ── Bottom: Swipe Down Indicator ── */}
-      <motion.div
+      {/* ── Bottom Controls & Swipe Down ── */}
+      <footer
         data-no-burst
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 1.5 }}
         style={{
           zIndex: 10,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '8px',
+          gap: '12px',
         }}
       >
+        {/* Floating "BURST THE SKY 🎆" Button */}
+        {isInteractive && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            onClick={onBurstSkyButton}
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 215, 106, 0.25) 0%, rgba(212, 166, 74, 0.45) 100%)',
+              border: '1.5px solid rgba(255, 215, 106, 0.75)',
+              borderRadius: '50px',
+              padding: '10px 24px',
+              color: '#FFD76A',
+              fontFamily: "'Cinzel', serif",
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              cursor: 'pointer',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 0 25px rgba(255, 215, 106, 0.4)',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 0 35px rgba(255, 215, 106, 0.7)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 0 25px rgba(255, 215, 106, 0.4)';
+            }}
+          >
+            🎆 BURST THE SKY 🎆
+          </motion.button>
+        )}
+
+        {/* Swipe Down Button */}
         <button
           onClick={onSwipeDown}
           style={{
@@ -246,7 +366,7 @@ export default function SkyCelebration({
             padding: '12px 28px',
             color: '#FFD76A',
             fontFamily: "'Cinzel', serif",
-            fontSize: '0.85rem',
+            fontSize: '0.84rem',
             letterSpacing: '0.12em',
             cursor: 'pointer',
             backdropFilter: 'blur(12px)',
@@ -266,10 +386,10 @@ export default function SkyCelebration({
             e.currentTarget.style.boxShadow = '0 0 20px rgba(212, 166, 74, 0.3)';
           }}
         >
-          <span>↓ Swipe or Click Down For Your Blessing ↓</span>
+          <span>↓ Swipe or Click Down For Your Blessings ↓</span>
         </button>
 
-        {/* Pulsing down chevron */}
+        {/* Pulsing Down Chevron */}
         <motion.div
           animate={{ y: [0, 6, 0] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
@@ -284,8 +404,7 @@ export default function SkyCelebration({
         >
           ▾
         </motion.div>
-      </motion.div>
+      </footer>
     </section>
   );
 }
-
